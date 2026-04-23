@@ -834,10 +834,261 @@
       font-size: 0.8rem;
     }
 
-    /* Scrollbar fina */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    /* ============================================================
+       PAINEL FUSÃO DE COORDENADAS — aba Comparação
+    ============================================================ */
+    .fusion-hero {
+      background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,102,255,0.06));
+      border: 1px solid rgba(0,212,255,0.25);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fusion-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top right, rgba(0,212,255,0.12), transparent 60%);
+    }
+
+    .fusion-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .fusion-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,212,255,0.12);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.7rem;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    /* Chips dos sistemas usados na fusão */
+    .fusion-systems {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .fusion-sys-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid;
+      font-size: 0.72rem;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+    }
+
+    .fusion-sys-chip .chip-weight {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+    }
+
+    /* Grid de coordenadas geográficas */
+    .coord-geo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    @media (min-width: 480px) {
+      .coord-geo-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .coord-cell {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .coord-cell.accent-border {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(0,212,255,0.1);
+    }
+
+    .coord-cell-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .coord-cell-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    .coord-cell-sub {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* Bloco UTM — destaque maior */
+    .utm-block {
+      background: var(--surface2);
+      border: 1px solid rgba(0,212,255,0.3);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .utm-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .utm-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    @media (min-width: 480px) {
+      .utm-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .utm-item {
+      text-align: center;
+    }
+
+    .utm-item-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .utm-item-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .utm-item-value.zone { color: var(--accent); font-size: 1rem; }
+
+    /* Tabela de leituras individuais por sistema */
+    .readings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin-top: 4px;
+    }
+
+    .readings-table th {
+      background: var(--surface2);
+      padding: 7px 10px;
+      text-align: left;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .readings-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .readings-table tr:last-child td { border-bottom: none; }
+    .readings-table tr:hover td { background: var(--surface2); }
+
+    .readings-table tr.fusion-row td {
+      background: rgba(0,212,255,0.05);
+      font-weight: 700;
+      border-top: 2px solid rgba(0,212,255,0.3);
+      color: var(--accent);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+    }
+
+    /* Indicador de precisão esperada da fusão */
+    .fusion-precision-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,212,255,0.07);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-top: 10px;
+    }
+
+    .fusion-precision-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .fusion-precision-text { font-size: 0.78rem; color: var(--text); line-height: 1.5; }
+    .fusion-precision-text strong { color: var(--accent); }
+
+    /* Botão recalcular fusão */
+    .btn-fusion {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,102,255,0.15));
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 12px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+
+    .btn-fusion:hover {
+      background: linear-gradient(135deg, rgba(0,212,255,0.25), rgba(0,102,255,0.25));
+      transform: translateY(-1px);
+    }
+
+    .btn-fusion.loading i { animation: spin 1s linear infinite; }
 
     /* Transições de tema */
     *, *::before, *::after { transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
@@ -1373,7 +1624,135 @@
     <div class="compare-title"><i class="fa-solid fa-chart-column"></i> Comparativo GNSS</div>
     <div class="compare-sub">Análise técnica comparativa dos 4 sistemas globais de navegação por satélite</div>
 
-    <!-- Destaques automáticos -->
+    <!-- ======================================================
+         BLOCO: COORDENADAS COMBINADAS (FUSÃO MULTI-GNSS)
+    ====================================================== -->
+    <div class="fusion-hero">
+      <div class="fusion-title-row">
+        <div>
+          <div style="font-family:'Orbitron',sans-serif; font-size:0.95rem; font-weight:900; color:var(--accent); margin-bottom:4px;">
+            <i class="fa-solid fa-layer-group"></i> Posição Multi-GNSS Fundida
+          </div>
+          <div style="font-size:0.78rem; color:var(--muted);">
+            Média ponderada pela precisão de cada sistema · Datum WGS-84
+          </div>
+        </div>
+        <div class="fusion-badge">
+          <i class="fa-solid fa-atom"></i> FUSÃO ATIVA
+        </div>
+      </div>
+
+      <!-- Chips dos sistemas com pesos -->
+      <div class="fusion-systems" id="fusion-sys-chips">
+        <div class="fusion-sys-chip" style="border-color:var(--gps); color:var(--gps); background:rgba(59,130,246,0.08);">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--gps);display:inline-block;"></span>
+          GPS <span class="chip-weight" id="chip-w-gps">w=–</span>
+        </div>
+        <div class="fusion-sys-chip" style="border-color:var(--glonass); color:var(--glonass); background:rgba(239,68,68,0.08);">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--glonass);display:inline-block;"></span>
+          GLONASS <span class="chip-weight" id="chip-w-glo">w=–</span>
+        </div>
+        <div class="fusion-sys-chip" style="border-color:var(--galileo); color:var(--galileo); background:rgba(245,158,11,0.08);">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--galileo);display:inline-block;"></span>
+          Galileo <span class="chip-weight" id="chip-w-gal">w=–</span>
+        </div>
+        <div class="fusion-sys-chip" style="border-color:var(--beidou); color:var(--beidou); background:rgba(34,197,94,0.08);">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--beidou);display:inline-block;"></span>
+          BeiDou <span class="chip-weight" id="chip-w-bds">w=–</span>
+        </div>
+      </div>
+
+      <!-- Coordenadas Geográficas fundidas -->
+      <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:8px; font-family:'Orbitron',sans-serif;">
+        <i class="fa-solid fa-earth-americas"></i> Coordenadas Geográficas — WGS-84
+      </div>
+      <div class="coord-geo-grid">
+        <div class="coord-cell accent-border">
+          <div class="coord-cell-label"><i class="fa-solid fa-arrows-up-down"></i> Latitude</div>
+          <div class="coord-cell-value" id="fusion-lat">--</div>
+          <div class="coord-cell-sub" id="fusion-lat-dms">--° --' --"</div>
+        </div>
+        <div class="coord-cell accent-border">
+          <div class="coord-cell-label"><i class="fa-solid fa-arrows-left-right"></i> Longitude</div>
+          <div class="coord-cell-value" id="fusion-lon">--</div>
+          <div class="coord-cell-sub" id="fusion-lon-dms">--° --' --"</div>
+        </div>
+        <div class="coord-cell">
+          <div class="coord-cell-label"><i class="fa-solid fa-mountain"></i> Altitude</div>
+          <div class="coord-cell-value" id="fusion-alt" style="color:var(--text);">--</div>
+          <div class="coord-cell-sub">elipsoidal (WGS-84)</div>
+        </div>
+      </div>
+
+      <!-- Bloco UTM -->
+      <div class="utm-block">
+        <div class="utm-title">
+          <i class="fa-solid fa-border-all"></i> Coordenadas UTM — SIRGAS 2000 / WGS-84
+        </div>
+        <div class="utm-grid">
+          <div class="utm-item">
+            <div class="utm-item-label">Fuso / Zona</div>
+            <div class="utm-item-value zone" id="utm-zone">--</div>
+          </div>
+          <div class="utm-item">
+            <div class="utm-item-label">Hemisfério</div>
+            <div class="utm-item-value" id="utm-hemi">--</div>
+          </div>
+          <div class="utm-item">
+            <div class="utm-item-label">Easting (E)</div>
+            <div class="utm-item-value" id="utm-e">-- m</div>
+          </div>
+          <div class="utm-item">
+            <div class="utm-item-label">Northing (N)</div>
+            <div class="utm-item-value" id="utm-n">-- m</div>
+          </div>
+        </div>
+        <div style="margin-top:10px; font-size:0.72rem; color:var(--muted); line-height:1.6;">
+          <i class="fa-solid fa-info-circle"></i>
+          O sistema UTM divide a Terra em 60 fusos de 6° de longitude. 
+          No Brasil, os fusos variam de <strong>18S</strong> a <strong>25S</strong> (Hemisfério Sul).
+          Easting usa falsa origem de 500.000 m; Northing usa 10.000.000 m no Hemisfério Sul.
+        </div>
+      </div>
+
+      <!-- Tabela de leituras individuais + linha de fusão -->
+      <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:8px; font-family:'Orbitron',sans-serif;">
+        <i class="fa-solid fa-list"></i> Leituras Individuais vs. Posição Fundida
+      </div>
+      <div style="overflow-x:auto; border-radius:10px; border:1px solid var(--border);">
+        <table class="readings-table">
+          <thead>
+            <tr>
+              <th>Sistema</th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>Altitude</th>
+              <th>Erro ±</th>
+              <th>Peso</th>
+            </tr>
+          </thead>
+          <tbody id="fusion-readings-body">
+            <tr><td colspan="6" style="text-align:center; color:var(--muted); padding:16px;">Aguardando cálculo...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Banner de qualidade da fusão -->
+      <div class="fusion-precision-banner">
+        <div class="fusion-precision-icon">🎯</div>
+        <div class="fusion-precision-text">
+          Precisão estimada da solução fundida: <strong id="fusion-cep">--</strong> · 
+          Método: <strong>média ponderada por 1/σ²</strong> (menor erro recebe maior peso) · 
+          Sat. usados na solução: <strong id="fusion-sats-used">--</strong>
+        </div>
+      </div>
+
+      <button class="btn-fusion" id="btnFusion" onclick="computeFusion()">
+        <i class="fa-solid fa-rotate" id="fusion-spin"></i> Recalcular Posição Fundida
+      </button>
+    </div>
+
+
     <div class="highlights">
       <div class="highlight-card">
         <div class="highlight-icon">🎯</div>
@@ -1596,6 +1975,7 @@
       // Inicializa mapa ao entrar na aba comparação
       if (tab === 'compare') {
         setTimeout(initMap, 100);
+        setTimeout(computeFusion, 300);
       }
     });
   });
@@ -1656,6 +2036,174 @@
   }
 
   /* ============================================================
+     CONVERSÃO GEOGRÁFICA → UTM (WGS-84 / SIRGAS 2000)
+     Implementação das fórmulas de Karney (série de Helmert)
+     Precisão: < 1 mm — adequada para fins didáticos e profissionais
+  ============================================================ */
+  function latLonToUTM(lat, lon) {
+    const a  = 6378137.0;
+    const f  = 1 / 298.257223563;
+    const k0 = 0.9996;
+    const n  = f / (2 - f);
+    const A  = a / (1 + n) * (1 + n*n/4 + n*n*n*n/64);
+    const a1 = n/2 - 2*n*n/3 + 5*n*n*n/16;
+    const a2 = 13*n*n/48 - 3*n*n*n/5;
+    const a3 = 61*n*n*n/240;
+
+    const latR  = lat * Math.PI / 180;
+    const zone  = Math.floor((lon + 180) / 6) + 1;
+    const lon0R = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+    const dLon  = lon * Math.PI / 180 - lon0R;
+
+    const sqrtN = 2 * Math.sqrt(n) / (1 + n);
+    const t  = Math.sinh(
+      Math.atanh(Math.sin(latR)) - sqrtN * Math.atanh(sqrtN * Math.sin(latR))
+    );
+    const xi  = Math.atan(t / Math.cos(dLon));
+    const eta = Math.atanh(Math.sin(dLon) / Math.sqrt(1 + t * t));
+
+    const xi2  = xi  + a1*Math.cos(2*xi)*Math.sinh(2*eta)
+                     + a2*Math.cos(4*xi)*Math.sinh(4*eta)
+                     + a3*Math.cos(6*xi)*Math.sinh(6*eta);
+    const eta2 = eta + a1*Math.sin(2*xi)*Math.cosh(2*eta)
+                     + a2*Math.sin(4*xi)*Math.cosh(4*eta)
+                     + a3*Math.sin(6*xi)*Math.cosh(6*eta);
+
+    let E = k0 * A * eta2 + 500000;
+    let N = k0 * A * xi2;
+    if (lat < 0) N += 10000000;
+
+    const hemi   = lat >= 0 ? 'Norte' : 'Sul';
+    const zoneId = zone + (lat >= 0 ? 'N' : 'S');
+    return { E: E.toFixed(3), N: N.toFixed(3), zone, zoneId, hemi };
+  }
+
+  /* ============================================================
+     CONVERTE DECIMAL → GRAUS, MINUTOS, SEGUNDOS (DMS)
+  ============================================================ */
+  function decToDMS(deg, isLat) {
+    const abs = Math.abs(deg);
+    const d   = Math.floor(abs);
+    const mAll= (abs - d) * 60;
+    const m   = Math.floor(mAll);
+    const s   = ((mAll - m) * 60).toFixed(4);
+    const dir = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+    return `${d}° ${String(m).padStart(2,'0')}' ${String(s).padStart(7,'0')}" ${dir}`;
+  }
+
+  /* ============================================================
+     CÁLCULO DA POSIÇÃO FUNDIDA MULTI-GNSS
+     Pesos: w_i = 1/σ_i²  (variância = erro médio ao quadrado)
+     Resultado: média ponderada das 4 leituras simultâneas
+     Precisão da solução: 1/√(ΣW) convertido para metros
+  ============================================================ */
+  function computeFusion() {
+    const btn  = document.getElementById('btnFusion');
+    const spin = document.getElementById('fusion-spin');
+    btn.classList.add('loading');
+    if (spin) spin.style.animation = 'spin 1s linear infinite';
+
+    setTimeout(() => {
+      if (!state.userLat) useSimulatedLocation();
+
+      const baseLat = state.userLat;
+      const baseLon = state.userLon;
+      const baseAlt = state.userAlt || simulateAlt();
+
+      const sysConf = [
+        { id:'gps',     label:'GPS',     color:'var(--gps)',     error:3.5,  sats:31 },
+        { id:'glonass', label:'GLONASS', color:'var(--glonass)', error:4.5,  sats:24 },
+        { id:'galileo', label:'Galileo', color:'var(--galileo)', error:1.0,  sats:28 },
+        { id:'beidou',  label:'BeiDou',  color:'var(--beidou)',  error:2.5,  sats:45 },
+      ];
+
+      const readings = sysConf.map(s => {
+        const noise = s.error / 111320;
+        const lat   = baseLat + (Math.random() - 0.5) * noise * 2;
+        const lon   = baseLon + (Math.random() - 0.5) * noise * 2;
+        const alt   = baseAlt + (Math.random() - 0.5) * s.error * 1.5;
+        const err   = s.error * (0.85 + Math.random() * 0.30);
+        return { ...s, lat, lon, alt, err };
+      });
+
+      // Média ponderada por 1/σ²
+      let sumW = 0, sumLat = 0, sumLon = 0, sumAlt = 0;
+      readings.forEach(r => {
+        const w  = 1 / (r.err * r.err);
+        sumW    += w;
+        sumLat  += w * r.lat;
+        sumLon  += w * r.lon;
+        sumAlt  += w * r.alt;
+      });
+
+      const fusLat = sumLat / sumW;
+      const fusLon = sumLon / sumW;
+      const fusAlt = sumAlt / sumW;
+      const fusErr = (1 / Math.sqrt(sumW) * 111320).toFixed(3);
+      const totalSats = readings.reduce((acc, r) => acc + r.sats, 0);
+
+      const utm = latLonToUTM(fusLat, fusLon);
+
+      // Coordenadas geográficas fundidas
+      document.getElementById('fusion-lat').textContent     = fusLat.toFixed(8) + '°';
+      document.getElementById('fusion-lon').textContent     = fusLon.toFixed(8) + '°';
+      document.getElementById('fusion-alt').textContent     = fusAlt.toFixed(3) + ' m';
+      document.getElementById('fusion-lat-dms').textContent = decToDMS(fusLat, true);
+      document.getElementById('fusion-lon-dms').textContent = decToDMS(fusLon, false);
+
+      // UTM
+      document.getElementById('utm-zone').textContent = utm.zoneId;
+      document.getElementById('utm-hemi').textContent = utm.hemi;
+      document.getElementById('utm-e').textContent    = Number(utm.E).toLocaleString('pt-BR', {minimumFractionDigits:3}) + ' m';
+      document.getElementById('utm-n').textContent    = Number(utm.N).toLocaleString('pt-BR', {minimumFractionDigits:3}) + ' m';
+
+      // Pesos nos chips
+      const chipMap = { gps:'chip-w-gps', glonass:'chip-w-glo', galileo:'chip-w-gal', beidou:'chip-w-bds' };
+      readings.forEach(r => {
+        const w   = 1 / (r.err * r.err);
+        const pct = (w / sumW * 100).toFixed(1);
+        const cel = document.getElementById(chipMap[r.id]);
+        if (cel) cel.textContent = 'w=' + pct + '%';
+      });
+
+      // Tabela de leituras
+      const tbody = document.getElementById('fusion-readings-body');
+      tbody.innerHTML = readings.map(r => {
+        const w   = 1 / (r.err * r.err);
+        const pct = (w / sumW * 100).toFixed(1);
+        return `<tr>
+          <td><span style="color:${r.color};font-weight:700;font-family:'Orbitron',sans-serif;font-size:0.7rem;">${r.label}</span></td>
+          <td>${r.lat.toFixed(7)}°</td>
+          <td>${r.lon.toFixed(7)}°</td>
+          <td>${r.alt.toFixed(2)} m</td>
+          <td>±${r.err.toFixed(3)} m</td>
+          <td><span style="color:${r.color};font-weight:700;">${pct}%</span></td>
+        </tr>`;
+      }).join('') + `
+        <tr class="fusion-row">
+          <td>⊕ FUSÃO</td>
+          <td>${fusLat.toFixed(7)}°</td>
+          <td>${fusLon.toFixed(7)}°</td>
+          <td>${fusAlt.toFixed(2)} m</td>
+          <td>±${fusErr} m</td>
+          <td>100%</td>
+        </tr>`;
+
+      document.getElementById('fusion-cep').textContent       = '±' + fusErr + ' m (CEP 50%)';
+      document.getElementById('fusion-sats-used').textContent = totalSats + ' (multi-constelação)';
+
+      // Atualiza mapa com posição fundida
+      state.userLat = fusLat;
+      state.userLon = fusLon;
+      state.userAlt = fusAlt;
+      updateMapMarker();
+
+      btn.classList.remove('loading');
+      if (spin) spin.style.animation = '';
+    }, 1100);
+  }
+
+  /* ============================================================
      DEFINIÇÃO DE SATÉLITES POR SISTEMA
      PRN = Pseudo-Random Noise number (identificador oficial)
      Sinais por sistema com frequência e nome de código reais
@@ -1664,6 +2212,7 @@
     gps: {
       prefix: 'gps',
       cssVar: '--gps',
+
       countId: 'gps-sat-counts',
       totalFleet: 31,
       // Sinais GPS disponíveis por satélite (varia conforme bloco IIR/IIF/III)
@@ -2181,7 +2730,9 @@
   window.addEventListener('DOMContentLoaded', () => {
     initCharts();
     useSimulatedLocation();
-    renderAllSatPanels(); // renderiza painel de satélites na inicialização
+    renderAllSatPanels();
+    // Calcula fusão inicial silenciosamente (dados prontos para quando abrir a aba)
+    setTimeout(computeFusion, 400);
     // Tenta geolocalização automaticamente
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
