@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>GNSS Explorer — Comparador de Sistemas de Navegação</title>
+
+  <!-- Fontes: Orbitron (display) + Rajdhani (corpo) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <!-- Leaflet.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <style>
+    /* ============================================================
+       VARIÁVEIS E RESET
+    ============================================================ */
+    :root {
+      --bg:        #080d14;
+      --surface:   #0d1520;
+      --surface2:  #121e2f;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #e2eaf5;
+      --muted:     #6a7d95;
+      --accent:    #00d4ff;
+
+      /* Cores por sistema */
+      --gps:      #3b82f6;
+      --glonass:  #ef4444;
+      --galileo:  #f59e0b;
+      --beidou:   #22c55e;
+    }
+    [data-theme="light"] {
+      --bg:       #f0f4f8;
+      --surface:  #ffffff;
+      --surface2: #e8edf3;
+      --border:   rgba(0,0,0,0.1);
+      --text:     #1a2535;
+      --muted:    #6a7d95;
+      --accent:   #0284c7;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 16px;
+      line-height: 1.5;
+      padding-bottom: 80px; /* espaço para nav inferior */
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ============================================================
+       HEADER
+    ============================================================ */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), #0066ff);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+
+    .logo-sub {
+      font-size: 0.65rem;
+      color: var(--muted);
+      display: block;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      width: 38px; height: 38px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text);
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover { background: var(--accent); color: #fff; }
+
+    /* ============================================================
+       MAIN CONTENT
+    ============================================================ */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 12px;
+    }
+
+    /* ============================================================
+       TABS — navegação inferior (mobile-first)
+    ============================================================ */
+    .tab-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 4px 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--muted);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .tab-btn i { font-size: 18px; }
+
+    .tab-btn.active { color: var(--tab-color, var(--accent)); }
+
+    .tab-btn.active::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 2px;
+      background: var(--tab-color, var(--accent));
+      border-radius: 0 0 3px 3px;
+    }
+
+    .tab-btn[data-tab="gps"]     { --tab-color: var(--gps); }
+    .tab-btn[data-tab="glonass"] { --tab-color: var(--glonass); }
+    .tab-btn[data-tab="galileo"] { --tab-color: var(--galileo); }
+    .tab-btn[data-tab="beidou"]  { --tab-color: var(--beidou); }
+    .tab-btn[data-tab="compare"] { --tab-color: var(--accent); }
+
+    /* ============================================================
+       TAB PANELS
+    ============================================================ */
+    .tab-panel { display: none; padding: 16px 0 20px; }
+    .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       CARDS
+    ============================================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ============================================================
+       SYSTEM HERO BANNER
+    ============================================================ */
+    .system-hero {
+      border-radius: 14px;
+      padding: 20px 16px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .system-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top right, var(--sys-color), transparent 60%);
+      opacity: 0.15;
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .system-logo {
+      width: 56px; height: 56px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--sys-color);
+      font-size: 24px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 4px 20px var(--sys-color-alpha);
+    }
+
+    .system-info h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      color: var(--sys-color);
+    }
+
+    .system-info .system-full-name {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .system-info .system-country {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-top: 6px;
+      color: var(--text);
+    }
+
+    /* ============================================================
+       STATS GRID
+    ============================================================ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--sys-color);
+    }
+
+    .stat-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       PRECISION BAR
+    ============================================================ */
+    .precision-section { margin-bottom: 14px; }
+
+    .precision-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .precision-bar-bg {
+      flex: 1;
+      height: 10px;
+      background: var(--surface2);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .precision-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      background: linear-gradient(90deg, var(--sys-color), var(--sys-color-light));
+      transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .precision-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--sys-color);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    /* ============================================================
+       FREQUÊNCIAS
+    ============================================================ */
+    .freq-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .freq-tag {
+      background: var(--surface2);
+      border: 1px solid var(--sys-color);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-family: 'Orbitron', sans-serif;
+      color: var(--sys-color);
+    }
+
+    /* ============================================================
+       POSIÇÃO GPS
+    ============================================================ */
+    .pos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .pos-item {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .pos-item-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .pos-item-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--sys-color);
+      margin-top: 3px;
+    }
+
+    /* ============================================================
+       BOTÃO ATUALIZAR
+    ============================================================ */
+    .btn-update {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--sys-color), var(--sys-color-dark, #0044aa));
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 20px var(--sys-color-alpha);
+    }
+    .btn-update:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .btn-update:active { transform: translateY(0); }
+    .btn-update.loading i { animation: spin 1s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       ABA COMPARAÇÃO — tabela
+    ============================================================ */
+    .compare-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .compare-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      min-width: 520px;
+    }
+
+    thead th {
+      background: var(--surface2);
+      padding: 10px 12px;
+      text-align: left;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+
+    tbody td {
+      padding: 10px 12px;
+      font-weight: 500;
+    }
+
+    .sys-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .sys-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .best-badge {
+      display: inline-block;
+      background: rgba(34,197,94,0.2);
+      color: #22c55e;
+      border: 1px solid #22c55e;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-left: 4px;
+    }
+
+    /* ============================================================
+       DESTAQUES
+    ============================================================ */
+    .highlights {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .highlight-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .highlight-icon {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .highlight-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .highlight-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    /* ============================================================
+       GRÁFICOS
+    ============================================================ */
+    .chart-container {
+      position: relative;
+      height: 220px;
+      margin-top: 10px;
+    }
+
+    /* ============================================================
+       MAPA
+    ============================================================ */
+    #map {
+      height: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 10px;
+    }
+
+    /* ============================================================
+       STATUS INDICATOR
+    ============================================================ */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ============================================================
+       RESPONSIVO — desktop
+    ============================================================ */
+    @media (min-width: 640px) {
+      .stats-grid { grid-template-columns: repeat(4, 1fr); }
+      .pos-grid   { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (min-width: 768px) {
+      body { padding-bottom: 0; }
+
+      .tab-nav {
+        position: static;
+        border-top: none;
+        border-bottom: 1px solid var(--border);
+        justify-content: center;
+        gap: 4px;
+        padding: 0 16px;
+      }
+
+      .tab-btn {
+        flex-direction: row;
+        flex: none;
+        padding: 14px 18px;
+        font-size: 0.8rem;
+        gap: 8px;
+      }
+
+      .tab-btn::before {
+        top: auto;
+        bottom: 0;
+        left: 15%;
+        right: 15%;
+        height: 2px;
+        border-radius: 3px 3px 0 0;
+      }
+
+      main { padding: 0 24px; }
+
+      .tab-panel { padding: 20px 0 30px; }
+    }
+
+    /* ============================================================
+       PAINEL DE SATÉLITES — grade de constelação
+    ============================================================ */
+    .sat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .sat-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sat-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .sat-legend-dot {
+      width: 9px; height: 9px;
+      border-radius: 2px;
+    }
+
+    /* Grade de satélites */
+    .sat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 6px;
+    }
+
+    /* Card de um satélite individual */
+    .sat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 6px 7px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sat-card.tracked {
+      border-color: var(--sys-color);
+      box-shadow: 0 0 8px var(--sys-color-alpha);
+    }
+
+    .sat-card.weak {
+      opacity: 0.55;
+    }
+
+    /* Número PRN */
+    .sat-prn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--sys-color);
+      letter-spacing: 0.05em;
+    }
+
+    /* Ícone do satélite */
+    .sat-icon {
+      font-size: 15px;
+      color: var(--sys-color);
+      line-height: 1;
+    }
+
+    .sat-card.weak .sat-icon { color: var(--muted); }
+    .sat-card.weak .sat-prn  { color: var(--muted); }
+
+    /* Tags de sinais recebidos */
+    .sat-signals {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .sig-tag {
+      font-size: 0.58rem;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: var(--sys-color-alpha);
+      color: var(--sys-color);
+      border: 1px solid var(--sys-color);
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+
+    .sig-tag.weak {
+      opacity: 0.45;
+      background: transparent;
+      border-color: var(--muted);
+      color: var(--muted);
+    }
+
+    /* Barra SNR */
+    .snr-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+
+    .snr-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--sys-color), var(--sys-color-light, #93c5fd));
+      transition: width 0.6s ease;
+    }
+
+    .sat-snr-label {
+      font-size: 0.6rem;
+      color: var(--muted);
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Status badge no topo do card */
+    .sat-status-badge {
+      position: absolute;
+      top: 3px; right: 4px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--sys-color);
+      animation: pulse 2s infinite;
+    }
+    .sat-card.weak .sat-status-badge {
+      background: var(--muted);
+      animation: none;
+    }
+
+    /* Contador visível */
+    .sat-count-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sat-count-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .sat-count-chip span {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    /* Scrollbar fina */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+    /* Transições de tema */
+    *, *::before, *::after { transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
+  </style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     HEADER
+============================================================ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛰️</div>
+    <div>
+      <span class="logo-text">GNSS Explorer</span>
+      <span class="logo-sub">Sistemas de Navegação Global</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" id="themeToggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+      <i class="fa-solid fa-moon" id="themeIcon"></i>
+    </button>
+    <button class="btn-icon" id="locateBtn" title="Obter localização" aria-label="Obter localização atual">
+      <i class="fa-solid fa-location-crosshairs"></i>
+    </button>
+  </div>
+</header>
+
+<!-- ============================================================
+     TAB NAVIGATION
+============================================================ -->
+<nav class="tab-nav" role="tablist" aria-label="Sistemas GNSS">
+  <button class="tab-btn active" data-tab="gps" role="tab" aria-selected="true">
+    <i class="fa-solid fa-satellite"></i><span>GPS</span>
+  </button>
+  <button class="tab-btn" data-tab="glonass" role="tab" aria-selected="false">
+    <i class="fa-solid fa-satellite-dish"></i><span>GLONASS</span>
+  </button>
+  <button class="tab-btn" data-tab="galileo" role="tab" aria-selected="false">
+    <i class="fa-brands fa-galactic-republic"></i><span>Galileo</span>
+  </button>
+  <button class="tab-btn" data-tab="beidou" role="tab" aria-selected="false">
+    <i class="fa-solid fa-earth-asia"></i><span>BeiDou</span>
+  </button>
+  <button class="tab-btn" data-tab="compare" role="tab" aria-selected="false">
+    <i class="fa-solid fa-chart-bar"></i><span>Comparar</span>
+  </button>
+</nav>
+
+<!-- ============================================================
+     MAIN
+============================================================ -->
+<main>
+
+  <!-- ======================== GPS ======================== -->
+  <section class="tab-panel active" id="panel-gps" role="tabpanel" aria-labelledby="tab-gps"
+    style="--sys-color: var(--gps); --sys-color-alpha: rgba(59,130,246,0.25); --sys-color-light: #93c5fd; --sys-color-dark: #1d4ed8;">
+
+    <div class="status-bar">
+      <span class="status-dot"></span>
+      <span id="gps-status">Dados simulados — precisão educacional</span>
+    </div>
+
+    <div class="system-hero card" style="--sys-color: var(--gps); --sys-color-alpha: rgba(59,130,246,0.25);">
+      <div class="hero-top">
+        <div class="system-logo" style="background: var(--gps); box-shadow: 0 4px 20px rgba(59,130,246,0.4);">GPS</div>
+        <div class="system-info">
+          <h2>GPS</h2>
+          <div class="system-full-name">Global Positioning System</div>
+          <span class="system-country"><i class="fa-solid fa-flag-usa"></i> Estados Unidos — DoD</span>
+        </div>
+      </div>
+      <p style="font-size:0.82rem; color: var(--muted); line-height:1.6;">
+        Pioneiro entre os sistemas GNSS, operacional desde 1978 e disponível civilmente desde 1995. 
+        Compõe-se de 3 segmentos: espacial, controle e usuário, com satélites em órbita MEO a ~20.200 km.
+      </p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-satellite"></i> Satélites</div>
+        <div class="stat-value" id="gps-sat">31</div>
+        <div class="stat-sub">operacionais</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-crosshairs"></i> Precisão</div>
+        <div class="stat-value" id="gps-prec">~3.5m</div>
+        <div class="stat-sub">média civil</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-clock"></i> TTFF</div>
+        <div class="stat-value">~30s</div>
+        <div class="stat-sub">cold start</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-globe"></i> Cobertura</div>
+        <div class="stat-value">Global</div>
+        <div class="stat-sub">100% do globo</div>
+      </div>
+    </div>
+
+    <!-- Precisão Visual -->
+    <div class="card precision-section">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-ruler"></i> Indicador de Precisão</span>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted);">Precisão relativa (menor erro = melhor)</div>
+      <div class="precision-bar-wrap">
+        <div class="precision-bar-bg">
+          <div class="precision-bar-fill" id="gps-bar" style="width:82%"></div>
+        </div>
+        <span class="precision-label" id="gps-bar-label">3.5m</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;">
+        Altitude orbital: <strong style="color:var(--gps)">~20.200 km</strong> · 
+        Inclinação: <strong style="color:var(--gps)">55°</strong> · 
+        Período: <strong style="color:var(--gps)">~12h</strong>
+      </div>
+    </div>
+
+    <!-- Frequências -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px;"><i class="fa-solid fa-wave-square"></i> Frequências de Operação</div>
+      <div class="freq-list" id="gps-freq">
+        <span class="freq-tag">L1 · 1575.42 MHz</span>
+        <span class="freq-tag">L2 · 1227.60 MHz</span>
+        <span class="freq-tag">L5 · 1176.45 MHz</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-top:8px;">
+        Sinal civil: L1 C/A · Sinal militar: P(Y) e M-Code
+      </div>
+    </div>
+
+    <!-- Posição -->
+    <!-- Painel de Satélites GPS -->
+    <div class="card" id="sat-panel-gps">
+      <div class="sat-header">
+        <span class="card-title"><i class="fa-solid fa-satellite"></i> Satélites GPS Visíveis</span>
+        <div class="sat-legend">
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--gps)"></span>Rastreado</span>
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--muted)"></span>Fraco/ausente</span>
+        </div>
+      </div>
+      <div class="sat-count-row" id="gps-sat-counts"></div>
+      <div class="sat-grid" id="sat-grid-gps"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-location-dot"></i> Posição Simulada (GPS)</span>
+        <span style="font-size:0.7rem; color:var(--muted);" id="gps-timestamp">--:--:--</span>
+      </div>
+      <div class="pos-grid">
+        <div class="pos-item">
+          <div class="pos-item-label">Latitude</div>
+          <div class="pos-item-value" id="gps-lat">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Longitude</div>
+          <div class="pos-item-value" id="gps-lon">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Altitude</div>
+          <div class="pos-item-value" id="gps-alt">--</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-update" onclick="updateSystem('gps')">
+      <i class="fa-solid fa-rotate" id="gps-spin"></i> Atualizar Medição GPS
+    </button>
+  </section>
+
+
+  <!-- ======================== GLONASS ======================== -->
+  <section class="tab-panel" id="panel-glonass" role="tabpanel"
+    style="--sys-color: var(--glonass); --sys-color-alpha: rgba(239,68,68,0.25); --sys-color-light: #fca5a5; --sys-color-dark: #b91c1c;">
+
+    <div class="status-bar">
+      <span class="status-dot"></span>
+      <span>Dados simulados — precisão educacional</span>
+    </div>
+
+    <div class="system-hero card">
+      <div class="hero-top">
+        <div class="system-logo" style="background: var(--glonass); box-shadow: 0 4px 20px rgba(239,68,68,0.4);">GLO</div>
+        <div class="system-info">
+          <h2 style="color:var(--glonass)">GLONASS</h2>
+          <div class="system-full-name">Globalnaya Navigatsionnaya Sputnikovaya Sistema</div>
+          <span class="system-country"><i class="fa-solid fa-star"></i> Rússia — Roscosmos</span>
+        </div>
+      </div>
+      <p style="font-size:0.82rem; color: var(--muted); line-height:1.6;">
+        Sistema russo lançado em 1982, restaurado à plena capacidade em 2011. 
+        Utiliza FDMA (divisão de frequência) para distinguir satélites, ao contrário dos demais que usam CDMA.
+      </p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-satellite"></i> Satélites</div>
+        <div class="stat-value" id="glo-sat">24</div>
+        <div class="stat-sub">operacionais</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-crosshairs"></i> Precisão</div>
+        <div class="stat-value" id="glo-prec">~4.5m</div>
+        <div class="stat-sub">média civil</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-clock"></i> TTFF</div>
+        <div class="stat-value">~40s</div>
+        <div class="stat-sub">cold start</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-globe"></i> Cobertura</div>
+        <div class="stat-value">Global</div>
+        <div class="stat-sub">ênfase polar</div>
+      </div>
+    </div>
+
+    <div class="card precision-section">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-ruler"></i> Indicador de Precisão</span>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted);">Precisão relativa</div>
+      <div class="precision-bar-wrap">
+        <div class="precision-bar-bg">
+          <div class="precision-bar-fill" id="glo-bar" style="width:70%"></div>
+        </div>
+        <span class="precision-label" id="glo-bar-label">4.5m</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;">
+        Altitude orbital: <strong style="color:var(--glonass)">~19.140 km</strong> · 
+        Inclinação: <strong style="color:var(--glonass)">64.8°</strong> · 
+        Período: <strong style="color:var(--glonass)">~11h 15min</strong>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px;"><i class="fa-solid fa-wave-square"></i> Frequências de Operação</div>
+      <div class="freq-list">
+        <span class="freq-tag">L1 · 1598.0625–1609.3125 MHz</span>
+        <span class="freq-tag">L2 · 1242.9375–1251.6875 MHz</span>
+        <span class="freq-tag">L3 · 1202.025 MHz</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-top:8px;">
+        Técnica FDMA exclusiva · Cada satélite usa frequência distinta
+      </div>
+    </div>
+
+    <!-- Painel de Satélites GLONASS -->
+    <div class="card" id="sat-panel-glonass">
+      <div class="sat-header">
+        <span class="card-title"><i class="fa-solid fa-satellite"></i> Satélites GLONASS Visíveis</span>
+        <div class="sat-legend">
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--glonass)"></span>Rastreado</span>
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--muted)"></span>Fraco/ausente</span>
+        </div>
+      </div>
+      <div class="sat-count-row" id="glo-sat-counts"></div>
+      <div class="sat-grid" id="sat-grid-glonass"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-location-dot"></i> Posição Simulada (GLONASS)</span>
+        <span style="font-size:0.7rem; color:var(--muted);" id="glo-timestamp">--:--:--</span>
+      </div>
+      <div class="pos-grid">
+        <div class="pos-item">
+          <div class="pos-item-label">Latitude</div>
+          <div class="pos-item-value" id="glo-lat">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Longitude</div>
+          <div class="pos-item-value" id="glo-lon">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Altitude</div>
+          <div class="pos-item-value" id="glo-alt">--</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-update" onclick="updateSystem('glonass')">
+      <i class="fa-solid fa-rotate" id="glo-spin"></i> Atualizar Medição GLONASS
+    </button>
+  </section>
+
+
+  <!-- ======================== GALILEO ======================== -->
+  <section class="tab-panel" id="panel-galileo" role="tabpanel"
+    style="--sys-color: var(--galileo); --sys-color-alpha: rgba(245,158,11,0.25); --sys-color-light: #fcd34d; --sys-color-dark: #b45309;">
+
+    <div class="status-bar">
+      <span class="status-dot"></span>
+      <span>Dados simulados — precisão educacional</span>
+    </div>
+
+    <div class="system-hero card">
+      <div class="hero-top">
+        <div class="system-logo" style="background: var(--galileo); box-shadow: 0 4px 20px rgba(245,158,11,0.4);">GAL</div>
+        <div class="system-info">
+          <h2 style="color:var(--galileo)">Galileo</h2>
+          <div class="system-full-name">Sistema Europeu de Navegação por Satélite</div>
+          <span class="system-country"><i class="fa-brands fa-european-union"></i> União Europeia — ESA/GSA</span>
+        </div>
+      </div>
+      <p style="font-size:0.82rem; color: var(--muted); line-height:1.6;">
+        Sistema civil por natureza (não militar), com serviço inicial desde 2016. 
+        Oferece a maior precisão entre os sistemas GNSS para uso público, com serviço de alta precisão sub-métrico previsto.
+      </p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-satellite"></i> Satélites</div>
+        <div class="stat-value" id="gal-sat">28</div>
+        <div class="stat-sub">operacionais</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-crosshairs"></i> Precisão</div>
+        <div class="stat-value" id="gal-prec">~1.0m</div>
+        <div class="stat-sub">serviço aberto</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-clock"></i> TTFF</div>
+        <div class="stat-value">~26s</div>
+        <div class="stat-sub">cold start</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-globe"></i> Cobertura</div>
+        <div class="stat-value">Global</div>
+        <div class="stat-sub">100% do globo</div>
+      </div>
+    </div>
+
+    <div class="card precision-section">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-ruler"></i> Indicador de Precisão</span>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted);">Precisão relativa — <strong style="color:var(--galileo)">Melhor precisão civil ✦</strong></div>
+      <div class="precision-bar-wrap">
+        <div class="precision-bar-bg">
+          <div class="precision-bar-fill" id="gal-bar" style="width:96%"></div>
+        </div>
+        <span class="precision-label" id="gal-bar-label">1.0m</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;">
+        Altitude orbital: <strong style="color:var(--galileo)">~23.222 km</strong> · 
+        Inclinação: <strong style="color:var(--galileo)">56°</strong> · 
+        Período: <strong style="color:var(--galileo)">~14h</strong>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px;"><i class="fa-solid fa-wave-square"></i> Frequências de Operação</div>
+      <div class="freq-list">
+        <span class="freq-tag">E1 · 1575.42 MHz</span>
+        <span class="freq-tag">E5a · 1176.45 MHz</span>
+        <span class="freq-tag">E5b · 1207.14 MHz</span>
+        <span class="freq-tag">E6 · 1278.75 MHz</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-top:8px;">
+        Compatível com GPS L1/L5 · Serviço Comercial (CS) com criptografia
+      </div>
+    </div>
+
+    <!-- Painel de Satélites Galileo -->
+    <div class="card" id="sat-panel-galileo">
+      <div class="sat-header">
+        <span class="card-title"><i class="fa-solid fa-satellite"></i> Satélites Galileo Visíveis</span>
+        <div class="sat-legend">
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--galileo)"></span>Rastreado</span>
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--muted)"></span>Fraco/ausente</span>
+        </div>
+      </div>
+      <div class="sat-count-row" id="gal-sat-counts"></div>
+      <div class="sat-grid" id="sat-grid-galileo"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-location-dot"></i> Posição Simulada (Galileo)</span>
+        <span style="font-size:0.7rem; color:var(--muted);" id="gal-timestamp">--:--:--</span>
+      </div>
+      <div class="pos-grid">
+        <div class="pos-item">
+          <div class="pos-item-label">Latitude</div>
+          <div class="pos-item-value" id="gal-lat">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Longitude</div>
+          <div class="pos-item-value" id="gal-lon">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Altitude</div>
+          <div class="pos-item-value" id="gal-alt">--</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-update" onclick="updateSystem('galileo')">
+      <i class="fa-solid fa-rotate" id="gal-spin"></i> Atualizar Medição Galileo
+    </button>
+  </section>
+
+
+  <!-- ======================== BEIDOU ======================== -->
+  <section class="tab-panel" id="panel-beidou" role="tabpanel"
+    style="--sys-color: var(--beidou); --sys-color-alpha: rgba(34,197,94,0.25); --sys-color-light: #86efac; --sys-color-dark: #15803d;">
+
+    <div class="status-bar">
+      <span class="status-dot"></span>
+      <span>Dados simulados — precisão educacional</span>
+    </div>
+
+    <div class="system-hero card">
+      <div class="hero-top">
+        <div class="system-logo" style="background: var(--beidou); box-shadow: 0 4px 20px rgba(34,197,94,0.4);">BDS</div>
+        <div class="system-info">
+          <h2 style="color:var(--beidou)">BeiDou</h2>
+          <div class="system-full-name">BeiDou Navigation Satellite System (BDS-3)</div>
+          <span class="system-country"><i class="fa-solid fa-yin-yang"></i> China — CNSA</span>
+        </div>
+      </div>
+      <p style="font-size:0.82rem; color: var(--muted); line-height:1.6;">
+        Constelação mais numerosa do mundo em operação total (BDS-3) desde 2020. 
+        Utiliza combinação de órbitas GEO, IGSO e MEO, oferecendo cobertura regional aprimorada na Ásia-Pacífico.
+      </p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-satellite"></i> Satélites</div>
+        <div class="stat-value" id="bds-sat">45</div>
+        <div class="stat-sub">op. (maior frota)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-crosshairs"></i> Precisão</div>
+        <div class="stat-value" id="bds-prec">~2.5m</div>
+        <div class="stat-sub">global</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-clock"></i> TTFF</div>
+        <div class="stat-value">~35s</div>
+        <div class="stat-sub">cold start</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-globe"></i> Cobertura</div>
+        <div class="stat-value">Global</div>
+        <div class="stat-sub">foco Ásia-Pac.</div>
+      </div>
+    </div>
+
+    <div class="card precision-section">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-ruler"></i> Indicador de Precisão</span>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted);">Precisão relativa — <strong style="color:var(--beidou)">Maior frota ✦</strong></div>
+      <div class="precision-bar-wrap">
+        <div class="precision-bar-bg">
+          <div class="precision-bar-fill" id="bds-bar" style="width:88%"></div>
+        </div>
+        <span class="precision-label" id="bds-bar-label">2.5m</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;">
+        Órbitas: <strong style="color:var(--beidou)">MEO ~21.500 km</strong> + 
+        <strong style="color:var(--beidou)">GEO 35.786 km</strong> + 
+        <strong style="color:var(--beidou)">IGSO 35.786 km</strong>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px;"><i class="fa-solid fa-wave-square"></i> Frequências de Operação</div>
+      <div class="freq-list">
+        <span class="freq-tag">B1I · 1561.098 MHz</span>
+        <span class="freq-tag">B1C · 1575.42 MHz</span>
+        <span class="freq-tag">B2a · 1176.45 MHz</span>
+        <span class="freq-tag">B2b · 1207.14 MHz</span>
+        <span class="freq-tag">B3I · 1268.52 MHz</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-top:8px;">
+        B1C compatível com GPS L1/Galileo E1 · Serviço de mensagens bidirecionais
+      </div>
+    </div>
+
+    <!-- Painel de Satélites BeiDou -->
+    <div class="card" id="sat-panel-beidou">
+      <div class="sat-header">
+        <span class="card-title"><i class="fa-solid fa-satellite"></i> Satélites BeiDou Visíveis</span>
+        <div class="sat-legend">
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--beidou)"></span>Rastreado</span>
+          <span class="sat-legend-item"><span class="sat-legend-dot" style="background:var(--muted)"></span>Fraco/ausente</span>
+        </div>
+      </div>
+      <div class="sat-count-row" id="bds-sat-counts"></div>
+      <div class="sat-grid" id="sat-grid-beidou"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-location-dot"></i> Posição Simulada (BeiDou)</span>
+        <span style="font-size:0.7rem; color:var(--muted);" id="bds-timestamp">--:--:--</span>
+      </div>
+      <div class="pos-grid">
+        <div class="pos-item">
+          <div class="pos-item-label">Latitude</div>
+          <div class="pos-item-value" id="bds-lat">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Longitude</div>
+          <div class="pos-item-value" id="bds-lon">--</div>
+        </div>
+        <div class="pos-item">
+          <div class="pos-item-label">Altitude</div>
+          <div class="pos-item-value" id="bds-alt">--</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-update" onclick="updateSystem('beidou')">
+      <i class="fa-solid fa-rotate" id="bds-spin"></i> Atualizar Medição BeiDou
+    </button>
+  </section>
+
+
+  <!-- ======================== COMPARAÇÃO ======================== -->
+  <section class="tab-panel" id="panel-compare" role="tabpanel">
+
+    <div class="compare-title"><i class="fa-solid fa-chart-column"></i> Comparativo GNSS</div>
+    <div class="compare-sub">Análise técnica comparativa dos 4 sistemas globais de navegação por satélite</div>
+
+    <!-- Destaques automáticos -->
+    <div class="highlights">
+      <div class="highlight-card">
+        <div class="highlight-icon">🎯</div>
+        <div class="highlight-label">Maior Precisão</div>
+        <div class="highlight-value" style="color:var(--galileo)">Galileo</div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">~1.0m</div>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">🛰️</div>
+        <div class="highlight-label">Mais Satélites</div>
+        <div class="highlight-value" style="color:var(--beidou)">BeiDou</div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">45 satélites</div>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">🌍</div>
+        <div class="highlight-label">Mais Frequências</div>
+        <div class="highlight-value" style="color:var(--beidou)">BeiDou</div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-top:2px;">5 bandas</div>
+      </div>
+    </div>
+
+    <!-- Tabela comparativa -->
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div style="padding:14px 16px 10px; border-bottom:1px solid var(--border);">
+        <div class="card-title"><i class="fa-solid fa-table"></i> Tabela Técnica Comparativa</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sistema</th>
+              <th>Satélites</th>
+              <th>Precisão</th>
+              <th>Altitude</th>
+              <th>TTFF</th>
+              <th>Cobertura</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--gps)"></span>GPS</span></td>
+              <td>31</td>
+              <td>~3.5m</td>
+              <td>20.200 km</td>
+              <td>~30s</td>
+              <td>Global</td>
+            </tr>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--glonass)"></span>GLONASS</span></td>
+              <td>24</td>
+              <td>~4.5m</td>
+              <td>19.140 km</td>
+              <td>~40s</td>
+              <td>Global</td>
+            </tr>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--galileo)"></span>Galileo</span></td>
+              <td>28</td>
+              <td>~1.0m <span class="best-badge">✦ Melhor</span></td>
+              <td>23.222 km</td>
+              <td>~26s</td>
+              <td>Global</td>
+            </tr>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--beidou)"></span>BeiDou</span></td>
+              <td>45 <span class="best-badge">✦ Mais</span></td>
+              <td>~2.5m</td>
+              <td>MEO+GEO+IGSO</td>
+              <td>~35s</td>
+              <td>Global+</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tabela aplicações -->
+    <div class="card" style="padding:0; overflow:hidden; margin-top:14px;">
+      <div style="padding:14px 16px 10px; border-bottom:1px solid var(--border);">
+        <div class="card-title"><i class="fa-solid fa-briefcase"></i> Aplicações Típicas</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sistema</th>
+              <th>Aplicação Principal</th>
+              <th>Tecnologia Distintiva</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--gps)"></span>GPS</span></td>
+              <td>Navegação geral, agricultura de precisão</td>
+              <td>CDMA · L-band</td>
+            </tr>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--glonass)"></span>GLONASS</span></td>
+              <td>Defesa, cobertura polar, aviação</td>
+              <td>FDMA único · alta lat.</td>
+            </tr>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--galileo)"></span>Galileo</span></td>
+              <td>Serviços civis, emergência (SAR), RTK</td>
+              <td>Serviço aberto de alta prec.</td>
+            </tr>
+            <tr>
+              <td><span class="sys-badge"><span class="sys-dot" style="background:var(--beidou)"></span>BeiDou</span></td>
+              <td>Logística Ásia, rastreamento marítimo</td>
+              <td>Mensagens bidirecionais</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Gráfico: Satélites -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:4px;"><i class="fa-solid fa-satellite"></i> Satélites Operacionais</div>
+      <div class="chart-container">
+        <canvas id="chartSat"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfico: Precisão -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:4px;"><i class="fa-solid fa-crosshairs"></i> Precisão Média Civil (metros — menor é melhor)</div>
+      <div class="chart-container">
+        <canvas id="chartPrec"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfico: Radar -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:4px;"><i class="fa-solid fa-circle-nodes"></i> Análise Comparativa Multi-Critério</div>
+      <div class="chart-container" style="height:280px;">
+        <canvas id="chartRadar"></canvas>
+      </div>
+    </div>
+
+    <!-- Mapa -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-map-location-dot"></i> Mapa de Erro por Sistema</span>
+        <span style="font-size:0.7rem; color:var(--muted);">Círculos = margem de erro</span>
+      </div>
+      <div id="map"></div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+        <span style="font-size:0.75rem; color:var(--muted);"><span style="color:var(--gps);">●</span> GPS ~3.5m</span>
+        <span style="font-size:0.75rem; color:var(--muted);"><span style="color:var(--glonass);">●</span> GLONASS ~4.5m</span>
+        <span style="font-size:0.75rem; color:var(--muted);"><span style="color:var(--galileo);">●</span> Galileo ~1.0m</span>
+        <span style="font-size:0.75rem; color:var(--muted);"><span style="color:var(--beidou);">●</span> BeiDou ~2.5m</span>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+  /* ============================================================
+     ESTADO GLOBAL
+  ============================================================ */
+  const state = {
+    userLat: null,
+    userLon: null,
+    userAlt: null,
+    theme: 'dark',
+    map: null,
+    circles: {},
+    marker: null
+  };
+
+  // Dados base de cada sistema
+  const SYSTEMS = {
+    gps: {
+      id: 'gps', prefix: 'gps',
+      error: 3.5, sats: 31,
+      color: '#3b82f6',
+      spinId: 'gps-spin',
+    },
+    glonass: {
+      id: 'glonass', prefix: 'glo',
+      error: 4.5, sats: 24,
+      color: '#ef4444',
+      spinId: 'glo-spin',
+    },
+    galileo: {
+      id: 'galileo', prefix: 'gal',
+      error: 1.0, sats: 28,
+      color: '#f59e0b',
+      spinId: 'gal-spin',
+    },
+    beidou: {
+      id: 'beidou', prefix: 'bds',
+      error: 2.5, sats: 45,
+      color: '#22c55e',
+      spinId: 'bds-spin',
+    }
+  };
+
+  /* ============================================================
+     NAVEGAÇÃO POR ABAS
+  ============================================================ */
+  const tabBtns  = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+      tabPanels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected','true');
+      document.getElementById('panel-' + tab).classList.add('active');
+
+      // Inicializa mapa ao entrar na aba comparação
+      if (tab === 'compare') {
+        setTimeout(initMap, 100);
+      }
+    });
+  });
+
+  /* ============================================================
+     TEMA CLARO / ESCURO
+  ============================================================ */
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon   = document.getElementById('themeIcon');
+
+  themeToggle.addEventListener('click', () => {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    state.theme = isDark ? 'light' : 'dark';
+    updateChartsTheme();
+    if (state.map) {
+      state.map.invalidateSize();
+    }
+  });
+
+  /* ============================================================
+     GEOLOCALIZAÇÃO
+  ============================================================ */
+  document.getElementById('locateBtn').addEventListener('click', getLocation);
+
+  function getLocation() {
+    if (!navigator.geolocation) {
+      useSimulatedLocation();
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        state.userLat = pos.coords.latitude;
+        state.userLon = pos.coords.longitude;
+        state.userAlt = pos.coords.altitude || simulateAlt();
+        updateAllPositions();
+        updateMapMarker();
+        document.getElementById('gps-status').textContent =
+          'GPS real obtido via browser — ' + new Date().toLocaleTimeString('pt-BR');
+      },
+      () => useSimulatedLocation()
+    );
+  }
+
+  function useSimulatedLocation() {
+    // Posição padrão: Gurupi - TO (Brasil)
+    state.userLat = -11.7294 + (Math.random() - 0.5) * 0.001;
+    state.userLon = -49.0677 + (Math.random() - 0.5) * 0.001;
+    state.userAlt = simulateAlt();
+    updateAllPositions();
+    updateMapMarker();
+  }
+
+  function simulateAlt() {
+    return Math.round(280 + Math.random() * 10);
+  }
+
+  /* ============================================================
+     DEFINIÇÃO DE SATÉLITES POR SISTEMA
+     PRN = Pseudo-Random Noise number (identificador oficial)
+     Sinais por sistema com frequência e nome de código reais
+  ============================================================ */
+  const SAT_DEFS = {
+    gps: {
+      prefix: 'gps',
+      cssVar: '--gps',
+      countId: 'gps-sat-counts',
+      totalFleet: 31,
+      // Sinais GPS disponíveis por satélite (varia conforme bloco IIR/IIF/III)
+      allSignals: ['L1 C/A','L1 P(Y)','L2 P(Y)','L2C','L5'],
+      // PRNs reais da constelação GPS (SVN/PRN 1–32)
+      sats: [
+        { prn:'G01', block:'III',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G02', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G03', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G04', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G05', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G06', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G07', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G08', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G09', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G10', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G11', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G12', block:'IIR-M',signals:['L1 C/A','L2C'] },
+        { prn:'G13', block:'IIR-M',signals:['L1 C/A','L2C'] },
+        { prn:'G14', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G15', block:'IIR-M',signals:['L1 C/A','L2C'] },
+        { prn:'G16', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G17', block:'IIR-M',signals:['L1 C/A','L2C'] },
+        { prn:'G18', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G19', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G20', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G21', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G22', block:'IIR',  signals:['L1 C/A','L2 P(Y)'] },
+        { prn:'G23', block:'IIR-M',signals:['L1 C/A','L2C'] },
+        { prn:'G24', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G25', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G26', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G27', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G28', block:'III',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G29', block:'IIR-M',signals:['L1 C/A','L2C'] },
+        { prn:'G30', block:'IIF',  signals:['L1 C/A','L2C','L5'] },
+        { prn:'G31', block:'IIR-M',signals:['L1 C/A','L2C'] },
+      ]
+    },
+
+    glonass: {
+      prefix: 'glo',
+      cssVar: '--glonass',
+      countId: 'glo-sat-counts',
+      totalFleet: 24,
+      allSignals: ['L1 OF','L1 SF','L2 OF','L2 SF','L3 OC'],
+      sats: [
+        { prn:'R01', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R02', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R03', block:'GLONASS-K1',signals:['L1 OF','L2 OF','L3 OC'] },
+        { prn:'R04', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R05', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R06', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R07', block:'GLONASS-K1',signals:['L1 OF','L2 OF','L3 OC'] },
+        { prn:'R08', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R09', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R10', block:'GLONASS-K1',signals:['L1 OF','L2 OF','L3 OC'] },
+        { prn:'R11', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R12', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R13', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R14', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R15', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R16', block:'GLONASS-K2',signals:['L1 OF','L2 OF','L3 OC'] },
+        { prn:'R17', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R18', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R19', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R20', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R21', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R22', block:'GLONASS-K1',signals:['L1 OF','L2 OF','L3 OC'] },
+        { prn:'R23', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+        { prn:'R24', block:'GLONASS-M', signals:['L1 OF','L2 OF'] },
+      ]
+    },
+
+    galileo: {
+      prefix: 'gal',
+      cssVar: '--galileo',
+      countId: 'gal-sat-counts',
+      totalFleet: 28,
+      allSignals: ['E1-B','E1-C','E5a','E5b','E6-B','E6-C'],
+      sats: [
+        { prn:'E01', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E02', block:'FOC', signals:['E1-B','E1-C','E5a','E5b'] },
+        { prn:'E03', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E04', block:'IOV', signals:['E1-B','E1-C','E5a'] },
+        { prn:'E05', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E07', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E08', block:'FOC', signals:['E1-B','E1-C','E5a','E5b'] },
+        { prn:'E09', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E11', block:'IOV', signals:['E1-B','E1-C','E5a'] },
+        { prn:'E12', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E13', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-C'] },
+        { prn:'E14', block:'FOC', signals:['E1-B','E1-C','E5a','E5b'] },
+        { prn:'E15', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E18', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E19', block:'IOV', signals:['E1-B','E1-C','E5a'] },
+        { prn:'E21', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E24', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E25', block:'FOC', signals:['E1-B','E1-C','E5a','E5b'] },
+        { prn:'E26', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-C'] },
+        { prn:'E27', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E30', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E31', block:'FOC', signals:['E1-B','E1-C','E5a','E5b'] },
+        { prn:'E33', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E34', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-C'] },
+        { prn:'E36', block:'FOC', signals:['E1-B','E1-C','E5a','E5b','E6-B'] },
+        { prn:'E28', block:'FOC', signals:['E1-B','E1-C','E5a','E5b'] },
+      ]
+    },
+
+    beidou: {
+      prefix: 'bds',
+      cssVar: '--beidou',
+      countId: 'bds-sat-counts',
+      totalFleet: 45,
+      allSignals: ['B1I','B1C','B2a','B2b','B3I'],
+      sats: [
+        { prn:'C01', block:'GEO',  signals:['B1I','B3I'] },
+        { prn:'C02', block:'GEO',  signals:['B1I','B3I'] },
+        { prn:'C03', block:'GEO',  signals:['B1I','B3I'] },
+        { prn:'C04', block:'GEO',  signals:['B1I','B3I'] },
+        { prn:'C05', block:'GEO',  signals:['B1I','B3I'] },
+        { prn:'C06', block:'IGSO', signals:['B1I','B3I'] },
+        { prn:'C07', block:'IGSO', signals:['B1I','B3I'] },
+        { prn:'C08', block:'IGSO', signals:['B1I','B3I'] },
+        { prn:'C09', block:'IGSO', signals:['B1I','B3I'] },
+        { prn:'C10', block:'IGSO', signals:['B1I','B3I'] },
+        { prn:'C11', block:'MEO',  signals:['B1I','B1C','B2a','B3I'] },
+        { prn:'C12', block:'MEO',  signals:['B1I','B1C','B2a','B3I'] },
+        { prn:'C13', block:'IGSO', signals:['B1I','B3I'] },
+        { prn:'C14', block:'MEO',  signals:['B1I','B1C','B2a','B3I'] },
+        { prn:'C16', block:'IGSO', signals:['B1I','B3I'] },
+        { prn:'C19', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C20', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C21', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C22', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C23', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C24', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C25', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C26', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C27', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C28', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C29', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C30', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C32', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C33', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C34', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C35', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C36', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C37', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C38', block:'IGSO', signals:['B1I','B1C','B2a','B3I'] },
+        { prn:'C39', block:'IGSO', signals:['B1I','B1C','B2a','B3I'] },
+        { prn:'C40', block:'IGSO', signals:['B1I','B1C','B2a','B3I'] },
+        { prn:'C41', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C42', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C43', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C44', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C45', block:'MEO',  signals:['B1I','B1C','B2a','B2b','B3I'] },
+        { prn:'C46', block:'GEO',  signals:['B1I','B3I'] },
+        { prn:'C59', block:'GEO',  signals:['B1I','B3I'] },
+        { prn:'C60', block:'IGSO', signals:['B1I','B1C','B2a','B3I'] },
+        { prn:'C61', block:'IGSO', signals:['B1I','B1C','B2a','B3I'] },
+      ]
+    }
+  };
+
+  /* ============================================================
+     SIMULAÇÃO DE RASTREAMENTO DE SATÉLITES
+     - Cada satélite recebe: visibilidade, SNR simulado e sinais ativos
+     - SNR range: 20–52 dBHz (típico real: 25–50 dBHz)
+     - Visível = elevação > ~10° (simulado como probabilidade)
+  ============================================================ */
+  function simulateSatTracking(sysId) {
+    const def = SAT_DEFS[sysId];
+    const results = [];
+
+    // Simula geometria: ~60-75% dos satélites da frota visíveis do hemisfério sul
+    const visibleProb = sysId === 'beidou' ? 0.55 : 0.65; // BeiDou: mais satélites GEO/IGSO asiáticos
+
+    def.sats.forEach(sat => {
+      const isVisible  = Math.random() < visibleProb;
+      const snr        = isVisible
+        ? Math.round(28 + Math.random() * 22)   // 28–50 dBHz
+        : Math.round(10 + Math.random() * 12);  // 10–22 dBHz (fraco)
+      const isTracked  = isVisible && snr >= 25;
+
+      // Simula quais sinais são recebidos com boa qualidade
+      const activeSignals = sat.signals.filter(() => {
+        if (!isVisible) return false;
+        // Sinal primário (1º) quase sempre ativo se visível
+        return Math.random() < 0.88;
+      });
+      // Garante pelo menos o sinal primário se rastreado
+      if (isTracked && activeSignals.length === 0) activeSignals.push(sat.signals[0]);
+
+      results.push({
+        prn: sat.prn,
+        block: sat.block,
+        isVisible,
+        isTracked,
+        snr,
+        signals: sat.signals,        // todos os sinais possíveis
+        activeSignals,               // sinais efetivamente recebidos agora
+      });
+    });
+
+    return results;
+  }
+
+  /* ============================================================
+     RENDERIZA O PAINEL DE SATÉLITES
+  ============================================================ */
+  function renderSatPanel(sysId) {
+    const def     = SAT_DEFS[sysId];
+    const data    = simulateSatTracking(sysId);
+    const gridEl  = document.getElementById('sat-grid-' + sysId);
+    const countEl = document.getElementById(def.countId);
+    if (!gridEl) return;
+
+    const tracked  = data.filter(s => s.isTracked).length;
+    const visible  = data.filter(s => s.isVisible).length;
+    const total    = data.length;
+
+    // Chips de contagem
+    countEl.innerHTML = `
+      <div class="sat-count-chip">
+        <i class="fa-solid fa-circle-check" style="color:var(${def.cssVar})"></i>
+        Rastreados: <span style="color:var(${def.cssVar})">${tracked}</span>
+      </div>
+      <div class="sat-count-chip">
+        <i class="fa-solid fa-eye" style="color:var(--muted)"></i>
+        Visíveis: <span>${visible}</span>
+      </div>
+      <div class="sat-count-chip">
+        <i class="fa-solid fa-satellite" style="color:var(--muted)"></i>
+        Total constelação: <span>${def.totalFleet}</span>
+      </div>
+    `;
+
+    // Gera cards ordenados: rastreados primeiro, depois visíveis, depois fracos
+    const sorted = [...data].sort((a,b) => {
+      if (a.isTracked && !b.isTracked) return -1;
+      if (!a.isTracked && b.isTracked) return 1;
+      return b.snr - a.snr;
+    });
+
+    gridEl.innerHTML = sorted.map(sat => {
+      const snrPct = Math.round((sat.snr - 10) / 42 * 100); // normalizado 10–52 dBHz
+      const cardClass = sat.isTracked ? 'sat-card tracked' : 'sat-card weak';
+
+      const signalTags = sat.signals.map(sig => {
+        const active = sat.activeSignals.includes(sig);
+        return `<span class="sig-tag ${active ? '' : 'weak'}" title="${active ? 'Sinal ativo' : 'Não recebido'}">${sig}</span>`;
+      }).join('');
+
+      return `
+        <div class="${cardClass}" title="${sat.prn} | Bloco: ${sat.block} | SNR: ${sat.snr} dBHz">
+          <div class="sat-status-badge"></div>
+          <div class="sat-prn">${sat.prn}</div>
+          <i class="fa-solid fa-satellite sat-icon"></i>
+          <div class="sat-signals">${signalTags}</div>
+          <div class="snr-wrap">
+            <div class="snr-fill" style="width:${sat.isTracked ? snrPct : Math.min(snrPct,20)}%"></div>
+          </div>
+          <div class="sat-snr-label">${sat.snr} dBHz</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /* Renderiza todos os painéis */
+  function renderAllSatPanels() {
+    Object.keys(SAT_DEFS).forEach(sysId => renderSatPanel(sysId));
+  }
+
+  
+  function updateSystem(sysId) {
+    const sys = SYSTEMS[sysId];
+    const btn = document.querySelector(`[onclick="updateSystem('${sysId}')"]`);
+    const spinEl = document.getElementById(sys.spinId);
+
+    // Animação loading
+    btn.classList.add('loading');
+    if (spinEl) spinEl.style.animation = 'spin 1s linear infinite';
+
+    setTimeout(() => {
+      // Garante posição base
+      if (!state.userLat) useSimulatedLocation();
+
+      const noise = sys.error / 111320; // converte metros -> graus
+      const lat = state.userLat + (Math.random() - 0.5) * noise * 2;
+      const lon = state.userLon + (Math.random() - 0.5) * noise * 2;
+      const alt = (state.userAlt || simulateAlt()) + (Math.random() - 0.5) * sys.error;
+
+      const p = sys.prefix;
+      const ts = new Date().toLocaleTimeString('pt-BR');
+
+      el(p + '-lat').textContent = lat.toFixed(6) + '°';
+      el(p + '-lon').textContent = lon.toFixed(6) + '°';
+      el(p + '-alt').textContent = alt.toFixed(1) + 'm';
+      const tsEl = document.getElementById(p + '-timestamp');
+      if (tsEl) tsEl.textContent = ts;
+
+      // Varia levemente a precisão simulada
+      const varPrec = sys.error + (Math.random() - 0.5) * (sys.error * 0.3);
+      const barEl   = document.getElementById(p + '-bar');
+      const lblEl   = document.getElementById(p + '-bar-label');
+      const precEl  = document.getElementById(p + '-prec');
+      if (barEl)   barEl.style.width = (100 - (varPrec / 6 * 100)).toFixed(0) + '%';
+      if (lblEl)   lblEl.textContent = varPrec.toFixed(1) + 'm';
+      if (precEl)  precEl.textContent = '~' + varPrec.toFixed(1) + 'm';
+
+      btn.classList.remove('loading');
+      if (spinEl) spinEl.style.animation = '';
+
+      // Re-renderiza painel de satélites com nova simulação de rastreamento
+      renderSatPanel(sysId);
+    }, 900);
+  }
+
+  function updateAllPositions() {
+    Object.keys(SYSTEMS).forEach(s => updateSystem(s));
+  }
+
+  /* ============================================================
+     MAPA LEAFLET
+  ============================================================ */
+  function initMap() {
+    if (state.map) return; // já iniciado
+
+    const lat = state.userLat || -11.7294;
+    const lon = state.userLon || -49.0677;
+
+    state.map = L.map('map', { zoomControl: true, attributionControl: false }).setView([lat, lon], 17);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 20, attribution: '© OSM'
+    }).addTo(state.map);
+
+    L.control.attribution({ prefix: '© <a href="https://openstreetmap.org">OSM</a>' }).addTo(state.map);
+
+    // Marcador central
+    state.marker = L.circleMarker([lat, lon], {
+      radius: 6, color: '#fff', fillColor: '#00d4ff', fillOpacity: 1, weight: 2
+    }).addTo(state.map).bindPopup('<b>Posição do usuário</b>').openPopup();
+
+    // Círculos de erro por sistema
+    const sysCircles = [
+      { id:'gps',     color:'#3b82f6', error: 3.5 },
+      { id:'glonass', color:'#ef4444', error: 4.5 },
+      { id:'galileo', color:'#f59e0b', error: 1.0 },
+      { id:'beidou',  color:'#22c55e', error: 2.5 },
+    ];
+
+    sysCircles.forEach(s => {
+      state.circles[s.id] = L.circle([lat, lon], {
+        radius: s.error,
+        color: s.color,
+        fillColor: s.color,
+        fillOpacity: 0.12,
+        weight: 2,
+        dashArray: '5 5'
+      }).addTo(state.map).bindTooltip(s.id.toUpperCase() + ' ±' + s.error + 'm');
+    });
+  }
+
+  function updateMapMarker() {
+    if (!state.map) return;
+    const lat = state.userLat;
+    const lon = state.userLon;
+    state.marker.setLatLng([lat, lon]);
+    Object.values(state.circles).forEach(c => c.setLatLng([lat, lon]));
+    state.map.setView([lat, lon], 17);
+  }
+
+  /* ============================================================
+     CHARTS — Chart.js
+  ============================================================ */
+  let chartSat, chartPrec, chartRadar;
+
+  function getChartDefaults() {
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    return {
+      textColor: isDark ? '#e2eaf5' : '#1a2535',
+      gridColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+      bgColor:   isDark ? '#0d1520' : '#ffffff',
+    };
+  }
+
+  function initCharts() {
+    const { textColor, gridColor } = getChartDefaults();
+
+    const labels   = ['GPS','GLONASS','Galileo','BeiDou'];
+    const colors   = ['#3b82f6','#ef4444','#f59e0b','#22c55e'];
+    const colorsA  = ['rgba(59,130,246,0.7)','rgba(239,68,68,0.7)','rgba(245,158,11,0.7)','rgba(34,197,94,0.7)'];
+
+    // --- Satélites ---
+    chartSat = new Chart(document.getElementById('chartSat'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Satélites operacionais',
+          data: [31, 24, 28, 45],
+          backgroundColor: colorsA,
+          borderColor: colors,
+          borderWidth: 2,
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            label: ctx => ' ' + ctx.parsed.y + ' satélites'
+          }}
+        },
+        scales: {
+          x: { ticks: { color: textColor, font: { family: 'Rajdhani', weight:'600' } }, grid: { color: gridColor } },
+          y: { ticks: { color: textColor, font: { family: 'Rajdhani' } }, grid: { color: gridColor }, beginAtZero: true }
+        }
+      }
+    });
+
+    // --- Precisão ---
+    chartPrec = new Chart(document.getElementById('chartPrec'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Erro médio (m)',
+          data: [3.5, 4.5, 1.0, 2.5],
+          backgroundColor: colorsA,
+          borderColor: colors,
+          borderWidth: 2,
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            label: ctx => ' ' + ctx.parsed.x + ' m (menor = melhor)'
+          }}
+        },
+        scales: {
+          x: { ticks: { color: textColor, font: { family: 'Rajdhani' } }, grid: { color: gridColor }, beginAtZero: true },
+          y: { ticks: { color: textColor, font: { family: 'Rajdhani', weight:'600' } }, grid: { color: gridColor } }
+        }
+      }
+    });
+
+    // --- Radar ---
+    chartRadar = new Chart(document.getElementById('chartRadar'), {
+      type: 'radar',
+      data: {
+        labels: ['Precisão','Nº Satélites','Cobertura','TTFF (rápido)','Frequências','Maturidade'],
+        datasets: [
+          { label:'GPS',     data:[75,70,90,80,70,100], borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.12)',  pointBackgroundColor:'#3b82f6', borderWidth:2 },
+          { label:'GLONASS', data:[60,55,85,60,65,85],  borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.12)',   pointBackgroundColor:'#ef4444', borderWidth:2 },
+          { label:'Galileo', data:[98,65,90,88,85,75],  borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.12)', pointBackgroundColor:'#f59e0b', borderWidth:2 },
+          { label:'BeiDou',  data:[85,100,95,70,100,70], borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.12)', pointBackgroundColor:'#22c55e', borderWidth:2 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: textColor, font: { family: 'Rajdhani', weight:'600' }, boxWidth: 12, padding: 14 }
+          }
+        },
+        scales: {
+          r: {
+            angleLines: { color: gridColor },
+            grid:       { color: gridColor },
+            pointLabels:{ color: textColor, font: { family: 'Rajdhani', size: 11, weight:'600' } },
+            ticks:      { display: false, stepSize: 20 },
+            min: 0, max: 100,
+          }
+        }
+      }
+    });
+  }
+
+  function updateChartsTheme() {
+    const { textColor, gridColor } = getChartDefaults();
+    [chartSat, chartPrec, chartRadar].forEach(ch => {
+      if (!ch) return;
+      if (ch.options.scales?.x?.ticks) ch.options.scales.x.ticks.color = textColor;
+      if (ch.options.scales?.y?.ticks) ch.options.scales.y.ticks.color = textColor;
+      if (ch.options.scales?.x?.grid)  ch.options.scales.x.grid.color  = gridColor;
+      if (ch.options.scales?.y?.grid)  ch.options.scales.y.grid.color  = gridColor;
+      if (ch.options.scales?.r) {
+        ch.options.scales.r.angleLines.color  = gridColor;
+        ch.options.scales.r.grid.color        = gridColor;
+        ch.options.scales.r.pointLabels.color = textColor;
+      }
+      if (ch.options.plugins?.legend?.labels) ch.options.plugins.legend.labels.color = textColor;
+      ch.update();
+    });
+  }
+
+  /* ============================================================
+     UTILITÁRIOS
+  ============================================================ */
+  function el(id) { return document.getElementById(id); }
+
+  /* ============================================================
+     INICIALIZAÇÃO
+  ============================================================ */
+  window.addEventListener('DOMContentLoaded', () => {
+    initCharts();
+    useSimulatedLocation();
+    renderAllSatPanels(); // renderiza painel de satélites na inicialização
+    // Tenta geolocalização automaticamente
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          state.userLat = pos.coords.latitude;
+          state.userLon = pos.coords.longitude;
+          state.userAlt = pos.coords.altitude || simulateAlt();
+          document.getElementById('gps-status').textContent =
+            'Posição real obtida — ' + new Date().toLocaleTimeString('pt-BR');
+          updateAllPositions();
+          updateMapMarker();
+        },
+        () => {} // silencioso; posição simulada já foi definida
+      );
+    }
+  });
+</script>
+
+</body>
+</html>
